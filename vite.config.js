@@ -12,11 +12,6 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, 'src'),
       },
     },
-    server: isDev
-      ? {
-          host: true,
-          port: 5173,
-        }
-      : undefined,
+
   }
 })
