@@ -43,17 +43,29 @@ const Passage1 = ({ onSubmit, fontSize }) => {
     if (onSubmit) onSubmit(count);
   };
 
-  // 🔄 Javobni o‘zgartirish funksiyasi
-  const handleAnswerChange = (questionId, value) => {
-    setUserAnswers((prev) => ({
-      ...prev,
-      [questionId]: value,
-    }));
+  // 🔄 UNIVERSAL: (qNum, blankNum, value)
+  const handleAnswerChange = (qNum, blankNum, value) => {
+    if (blankNum === null || blankNum === undefined) {
+      setUserAnswers((prev) => ({
+        ...prev,
+        [qNum]: value,
+      }));
+    } else {
+      setUserAnswers((prev) => ({
+        ...prev,
+        [qNum]: {
+          ...(prev[qNum] || {}),
+          [blankNum]: value,
+        },
+      }));
+    }
   };
 
-  if (loading || !passage) {
-    return <div className="reading-test-container">Yuklanmoqda...</div>;
-  }
+    if (loading || !passage) return (
+    <div className="flex justify-center items-center h-32">
+      <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-500 border-solid"></div>
+    </div>
+  );
 
   return (
     <div className="reading-test-container">
@@ -94,17 +106,13 @@ const Passage1 = ({ onSubmit, fontSize }) => {
                   question={q}
                   userAnswers={userAnswers}
                   submitted={submitted}
-                  onChange={(num, val) => handleAnswerChange(q.id, val)}
+                  onChange={handleAnswerChange}
+                  allQuestions={passage.questions}
                 />
               ))}
             </div>
 
-            {/* 📝 Submit tugmasi */}
-            {!submitted && (
-              <button className="submit-btn" onClick={handleSubmit}>
-                Submit Answers
-              </button>
-            )}
+           
           </div>
         </div>
       </div>

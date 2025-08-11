@@ -1,16 +1,22 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./MatchingHeadings.css";
 
-const MatchingHeadings = ({ question, userAnswers, submitted, onChange, correctAnswers }) => {
+const MatchingHeadings = ({ question, userAnswers, submitted, onChange, correctAnswers, onCorrectCountChange }) => {
   const qNum = question.question_number;
 
-  // To'g'ri javoblar sonini hisoblash
   const correctCount = Object.entries(userAnswers).reduce((count, [key, value]) => {
     if (correctAnswers[key] && correctAnswers[key] === value) {
       return count + 1;
     }
     return count;
   }, 0);
+
+  // To‘g‘ri javoblar soni o‘zgarganda onCorrectCountChange chaqirish
+  useEffect(() => {
+    if (onCorrectCountChange) {
+      onCorrectCountChange(correctCount);
+    }
+  }, [correctCount, onCorrectCountChange]);
 
   const renderWithSelects = (text) => {
     return text.split(/(\[\[[0-9]+\]\])/g).map((part, i) => {
@@ -22,9 +28,9 @@ const MatchingHeadings = ({ question, userAnswers, submitted, onChange, correctA
           <select
             key={`gap-${gapNum}-${i}`}
             value={userAnswers[key] || ""}
-            onChange={(e) => onChange(key, e.target.value)}
+            onChange={(e) => onChange(key, null, e.target.value)}
             disabled={submitted}
-            className="matching-select"
+            className="border border-black-300 p-1 mx-1 rounded h-10"
           >
             <option value="">Q {gapNum}</option>
             {question.options?.map((opt, idx) => (
@@ -42,7 +48,9 @@ const MatchingHeadings = ({ question, userAnswers, submitted, onChange, correctA
   return (
     <div className="matching-headings">
       {question.instruction && (
-        <p className="question-instruction">{question.instruction}</p>
+        <p style={{ color: "black", marginBottom: "20px", fontSize: "20px", fontWeight: "bold" }}>
+          {question.instruction}
+        </p>
       )}
 
       {(question.question_number === 23 || question.question_number === 32) && question.options?.length > 0 && (

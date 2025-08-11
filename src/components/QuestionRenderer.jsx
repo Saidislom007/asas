@@ -1,4 +1,3 @@
-// QuestionRenderer.jsx
 import React from 'react';
 import SentenceCompletion from './SentenceCompletion';
 import TableCompletion from './TableCompletion';
@@ -20,97 +19,128 @@ const componentMap = {
   multiple_choice_two: MatchingTwoAnswers,
 };
 
-const QuestionRenderer = ({ question, userAnswers, submitted, onChange, allQuestions }) => {
+const QuestionRenderer = ({
+  question,
+  userAnswers,
+  submitted,
+  onChange,
+  allQuestions,
+  onCorrectCountChange,
+}) => {
   const Component = componentMap[question.question_type];
   if (!Component) return null;
 
-  let props = {};
+  // Har bir question tipiga mos to'g'ri javoblar sonini hisoblab, onCorrectCountChange ga yuborish uchun
+  // Example: MatchingHeadings ichida count hisoblanadi va chaqiriladi
 
   // Sentence completion
   if (question.question_type === 'sentence_completion') {
-    props = {
-      number: question.question_number,
-      questionText: question.question_text,
-      instruction: question.instruction || '',
-      userAnswer: userAnswers[question.question_number] || '',
-    };
-  }
-
-  // Multiple choice (choose TWO answers) — guruh bo‘lib ko‘rsatish
-  else if (question.question_type === 'multiple_choice_two') {
-    const groupQuestions = allQuestions.filter(
-      q => q.question_type === 'multiple_choice_two'
+    return (
+      <Component
+        number={question.question_number}
+        questionText={question.question_text}
+        instruction={question.instruction || ''}
+        userAnswer={userAnswers[question.question_number] || ''}
+        correctAnswer={question.correct_answer}
+        submitted={submitted}
+        onChange={onChange}
+        onCorrectCountChange={onCorrectCountChange}
+      />
     );
-
-    props = {
-      instruction: groupQuestions[0]?.instruction || '',
-      options: groupQuestions[0]?.options || [],
-      questionNumbers: groupQuestions.map(q => q.question_number),
-      userAnswers,
-      submitted,
-      onChange
-    };
   }
 
   // Table completion
-  else if (question.question_type === 'table_completion') {
-    props = {
-      table: question.table,
-      instruction: question.instruction || '',
-    };
+  if (question.question_type === 'table_completion') {
+    return (
+      <Component
+        table={question.table}
+        instruction={question.instruction || ''}
+        correctAnswers={question.table?.answers?.map((a) => a.correct_answer) || []}
+        userAnswers={userAnswers}
+        submitted={submitted}
+        onChange={onChange}
+        onCorrectCountChange={onCorrectCountChange}
+      />
+    );
   }
 
   // Form completion
-  else if (question.question_type === 'form_completion') {
-    props = {
-      form: question.form,
-      instruction: question.instruction || '',
-    };
+  if (question.question_type === 'form_completion') {
+    return (
+      <Component
+        form={question.form}
+        instruction={question.instruction || ''}
+        correctAnswers={question.form?.answers?.map((a) => a.correct_answer) || []}
+        userAnswers={userAnswers}
+        submitted={submitted}
+        onChange={onChange}
+        onCorrectCountChange={onCorrectCountChange}
+      />
+    );
   }
 
-  // Single multiple choice
-  else if (question.question_type === 'multiple_choice') {
-    props = {
-      question,
-      instruction: question.instruction || '',
-      allQuestions
-    };
+  // Multiple choice
+  if (question.question_type === 'multiple_choice') {
+    return (
+      <Component
+        question={question}
+        instruction={question.instruction || ''}
+        correctAnswer={question.correct_answer}
+        userAnswer={userAnswers[question.question_number] || ''}
+        submitted={submitted}
+        onChange={onChange}
+        onCorrectCountChange={onCorrectCountChange}
+      />
+    );
   }
 
   // Map labelling
-  else if (question.question_type === 'map_labelling') {
-    props = {
-      imageSrc: question.imageSrc || question.map_image || '',
-      questionText: question.question_text || '',
-      instruction: question.instruction || '',
-      options: Array.isArray(question.options) ? question.options : [],
-      questionNumber: question.question_number,
-    };
+  if (question.question_type === 'map_labelling') {
+    return (
+      <Component
+        imageSrc={question.imageSrc || question.map_image || ''}
+        questionText={question.question_text || ''}
+        instruction={question.instruction || ''}
+        options={Array.isArray(question.options) ? question.options : []}
+        questionNumber={String(question.question_number)}
+        correctAnswers={question.map?.answers?.map((a) => a.correct_answer) || []}
+        userAnswers={userAnswers}
+        submitted={submitted}
+        onChange={onChange}
+        onCorrectCountChange={onCorrectCountChange}
+      />
+    );
   }
 
   // Matching headings
-  else if (question.question_type === 'matching_headings') {
-    props = { question,
-      userAnswers,
-      submitted,
-      onChange,
-      correctAnswers: question.correctAnswers || {},};
+  if (question.question_type === 'matching_headings') {
+    return (
+      <Component
+        question={question}
+        userAnswers={userAnswers}
+        correctAnswers={question.correctAnswers || {}}
+        submitted={submitted}
+        onChange={onChange}
+        onCorrectCountChange={onCorrectCountChange}
+      />
+    );
   }
 
-  // True / False / Not Given
-  else if (question.question_type === 'true_false_not_given') {
-    props = { question };
+  // True/False/Not Given
+  if (question.question_type === 'true_false_not_given') {
+    return (
+      <Component
+        question={question}
+        correctAnswer={question.correct_answer}
+        userAnswer={userAnswers[question.question_number] || ''}
+        submitted={submitted}
+        onChange={onChange}
+        onCorrectCountChange={onCorrectCountChange}
+      />
+    );
   }
 
-  return (
-    <Component
-      {...props}
-      userAnswers={userAnswers}
-      submitted={submitted}
-      onChange={onChange}
-      allQuestions={allQuestions}
-    />
-  );
+  return null;
 };
 
 export default QuestionRenderer;

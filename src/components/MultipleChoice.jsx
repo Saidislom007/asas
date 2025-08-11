@@ -1,47 +1,48 @@
-// MultipleChoice.jsx
 import React from 'react';
 
-const MultipleChoice = ({ question, userAnswers, submitted, onChange,instruction }) => {
-  const isMultiSelect = question.type=="matching" || false;
+const MultipleChoice = ({
+  question,
+  userAnswers = {},   // Default qiymat
+  onChange,
+  instruction,
+  submitted,
+  correctAnswer,
+  onCorrectCountChange,
+}) => {
   const qNum = question.question_number;
+  const userValue = userAnswers[qNum] || "";
 
   const handleSelect = (option) => {
-    const existing = userAnswers[qNum] || [];
-    let updated;
-
-    if (isMultiSelect) {
-      // Multi select: tanlangan bo‘lsa o‘chiramiz, bo‘lmasa qo‘shamiz
-      updated = existing.includes(option)
-        ? existing.filter((opt) => opt !== option)
-        : [...existing, option];
-    } else {
-      // Radio: faqat bitta qiymat
-      updated = [option];
-    }
-
-    onChange(qNum, updated);
-    
+    onChange(qNum, null, option);
   };
+
+  // Javob to'g'riligi tekshiruvi
+  React.useEffect(() => {
+    if (submitted && onCorrectCountChange) {
+      const isCorrect = userValue.toString().trim().toLowerCase() === correctAnswer.toString().trim().toLowerCase();
+      onCorrectCountChange(isCorrect ? 1 : 0);
+    }
+    // Submit yoki userValue o'zgarganda qayta hisoblaymiz
+  }, [submitted, userValue, correctAnswer, onCorrectCountChange]);
 
   return (
     <div className="multiple-choice">
-      {question.instruction && (
-        <p className="question-instruction">{question.instruction}</p>
+      {instruction && (
+        <p style={{ color: "black", marginBottom: "20px", fontSize: "20px", fontWeight: "bold" }}>
+          {instruction}
+        </p>
       )}
       <p className="question-text">
         <strong>Q{qNum}.</strong> {question.question_text}
       </p>
-
-
-
       <div className="options">
         {question.options?.map((opt, idx) => (
-          <label key={idx} className="option-label">
+          <label key={idx} className="option-label" style={{ display: "block", marginBottom: "10px", cursor: "pointer" }}>
             <input
-              type={isMultiSelect ? 'checkbox' : 'radio'}
+              type="radio"
               name={`q-${qNum}`}
               value={opt}
-              checked={(userAnswers[qNum] || []).includes(opt)}
+              checked={userValue === opt}
               onChange={() => handleSelect(opt)}
               disabled={submitted}
             />
@@ -49,6 +50,11 @@ const MultipleChoice = ({ question, userAnswers, submitted, onChange,instruction
           </label>
         ))}
       </div>
+      {submitted && (
+        <p style={{ marginTop: "10px", fontWeight: "bold", color: userValue === correctAnswer ? "green" : "red" }}>
+          To'g'ri javob: {correctAnswer}
+        </p>
+      )}
     </div>
   );
 };

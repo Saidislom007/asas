@@ -12,8 +12,12 @@ const Section3 = ({ onSubmit, sectionIndex = 0 }) => {
   const [userAnswers, setUserAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
-  const testId = import.meta.env.VITE_TEST_ID;
 
+  // For multi-matching groups (21-22 and 23-24)
+  const [multiMatchingAnswers21_22, setMultiMatchingAnswers21_22] = useState([]);
+  const [multiMatchingAnswers23_24, setMultiMatchingAnswers23_24] = useState([]);
+
+  const testId = import.meta.env.VITE_TEST_ID;
   const audioRef = useRef(null);
 
   // Register audioRef
@@ -30,9 +34,9 @@ const Section3 = ({ onSubmit, sectionIndex = 0 }) => {
       .get(`${import.meta.env.VITE_BACKEND_URL}/api/listening-tests/${testId}/section/3/`)
       .then((res) => setData(res.data))
       .catch((err) => console.error('Error fetching section 3:', err));
-  }, []);
+  }, [testId]);
 
-  // Input boshqaruvi
+  // For single-answer questions
   const handleInputChange = (number, _, value) => {
     setUserAnswers((prev) => ({
       ...prev,
@@ -40,20 +44,64 @@ const Section3 = ({ onSubmit, sectionIndex = 0 }) => {
     }));
   };
 
+  // Multi-matching group input handler
+  const handleMultiMatchingChange = (which, option) => {
+    if (which === '21_22') {
+      setMultiMatchingAnswers21_22((prev) => {
+        if (prev.includes(option)) {
+          return prev.filter((val) => val !== option);
+        } else if (prev.length < 2) {
+          return [...prev, option];
+        }
+        return prev;
+      });
+    } else if (which === '23_24') {
+      setMultiMatchingAnswers23_24((prev) => {
+        if (prev.includes(option)) {
+          return prev.filter((val) => val !== option);
+        } else if (prev.length < 2) {
+          return [...prev, option];
+        }
+        return prev;
+      });
+    }
+  };
+
   // Javobni tekshirish
   const checkCorrect = (number, correctAnswer, type) => {
-    const userValue = userAnswers[number];
-
-    if (type === 'matching') {
-      if (!Array.isArray(userValue)) return false;
+    // Multi-matching groups
+    if (type === 'matching' && (number === 21 || number === 22)) {
+      const idx = number === 21 ? 0 : 1;
+      const userAns = multiMatchingAnswers21_22[idx];
+      if (!userAns) return false;
       const correctVariants = correctAnswer
         .replace(/"/g, '')
         .split(',')
         .map((s) => s.trim().toUpperCase());
-      return (
-        userValue.length === 2 &&
-        userValue.every((ans) => correctVariants.includes(ans.toUpperCase()))
-      );
+      return correctVariants.includes(userAns.toUpperCase());
+    }
+    if (type === 'matching' && (number === 23 || number === 24)) {
+      const idx = number === 23 ? 0 : 1;
+      const userAns = multiMatchingAnswers23_24[idx];
+      if (!userAns) return false;
+      const correctVariants = correctAnswer
+        .replace(/"/g, '')
+        .split(',')
+        .map((s) => s.trim().toUpperCase());
+      return correctVariants.includes(userAns.toUpperCase());
+    }
+
+    // Single-matching or other
+    const userValue = userAnswers[number];
+
+    if (type === 'matching') {
+      if (!userValue) return false;
+      const userStr = (userValue || '').trim().toUpperCase();
+      const correctVariants = correctAnswer
+        .replace(/"/g, '')
+        .split(',')
+        .map((s) => s.trim().toUpperCase());
+      return correctVariants.includes(userStr);
     }
 
     const userStr = (userValue || '').trim().toLowerCase();
@@ -66,11 +114,29 @@ const Section3 = ({ onSubmit, sectionIndex = 0 }) => {
 
   // Submit
   const handleSubmit = () => {
+    // Multi-matching javoblarni userAnswers state ga joylash
+    setUserAnswers((prev) => ({
+      ...prev,
+      21: multiMatchingAnswers21_22[0],
+      22: multiMatchingAnswers21_22[1],
+      23: multiMatchingAnswers23_24[0],
+      24: multiMatchingAnswers23_24[1],
+    }));
     setSubmitted(true);
     let count = 0;
 
     data.questions.forEach((q) => {
-      if (q.question_type === 'table_completion' && q.table?.answers) {
+      if (
+        q.question_type === 'matching' &&
+        (q.question_number === 21 || q.question_number === 22)
+      ) {
+        if (checkCorrect(q.question_number, q.correct_answer, q.question_type)) count++;
+      } else if (
+        q.question_type === 'matching' &&
+        (q.question_number === 23 || q.question_number === 24)
+      ) {
+        if (checkCorrect(q.question_number, q.correct_answer, q.question_type)) count++;
+      } else if (q.question_type === 'table_completion' && q.table?.answers) {
         q.table.answers.forEach((ans) => {
           if (checkCorrect(ans.number, ans.correct_answer, q.question_type)) count++;
         });
@@ -81,8 +147,6 @@ const Section3 = ({ onSubmit, sectionIndex = 0 }) => {
       } else if (q.question_type === 'sentence_completion') {
         if (checkCorrect(q.question_number, q.correct_answer, q.question_type)) count++;
       } else if (q.question_type === 'multiple_choice') {
-        if (checkCorrect(q.question_number, q.correct_answer, q.question_type)) count++;
-      } else if (q.question_type === 'multiple_choice_two') {
         if (checkCorrect(q.question_number, q.correct_answer, q.question_type)) count++;
       } else if (q.question_type === 'matching') {
         if (checkCorrect(q.question_number, q.correct_answer, q.question_type)) count++;
@@ -106,11 +170,12 @@ const Section3 = ({ onSubmit, sectionIndex = 0 }) => {
       }
     });
   };
-  
-  if (!data) return <div>Loading...</div>;
 
-  // multiple_choice_two ni faqat 1 marta render qilish uchun nazorat
+  if (!data) return <div></div>;
 
+  // Multi-matching render flaglari
+  let renderedMultiMatching21_22 = false;
+  let renderedMultiMatching23_24 = false;
 
   return (
     <div className="section-container">
@@ -118,87 +183,160 @@ const Section3 = ({ onSubmit, sectionIndex = 0 }) => {
 
       {data.audio_file && <CustomAudioPlayer src={data.audio_file} />}
 
-{data.questions.map((q, idx) => {
-  // Questions 21 va 22 guruhiga oid bo'lsa:
-  if (q.question_type === 'matching' && (q.question_number === 21 || q.question_number === 22)) {
-    // Faqat 21-savol uchun instruction ni chiqaring
-    const showInstruction = q.question_number === 21;
+      {data.questions.map((q, idx) => {
+        // 21-22 multi-matching group
+        if (
+          q.question_type === 'matching' &&
+          (q.question_number === 21 || q.question_number === 22)
+        ) {
+          if (renderedMultiMatching21_22) return null;
+          renderedMultiMatching21_22 = true;
 
-    return (
-      <div key={q.id} className="matching-radio-question" style={{ marginBottom: '20px' }}>
-        {showInstruction && (
-          <p style={{ fontWeight: 'bold' }}>
-            Questions 21 and 22 Choose TWO letters, A-E.<br />
-            Which TWO groups of people is the display primarily intended for?
-          </p>
-        )}
+          // 21-savol options ni ishlatamiz
+          const options =
+            data.questions.find(
+              (quest) =>
+                quest.question_type === 'matching' && quest.question_number === 21
+            )?.options || [];
 
-        {q.options && q.options.length > 0 ? (
-          q.options.map((option, idxOption) => {
-            const value = option;
-            const checked = userAnswers[q.question_number] === value;
-            return (
-              <label
-                key={idxOption}
-                style={{ display: 'block', marginBottom: '8px', cursor: submitted ? 'default' : 'pointer' }}
-              >
-                <input
-                  type="radio"
-                  name={`matching-${q.question_number}`}
-                  value={value}
-                  checked={checked}
-                  disabled={submitted}
-                  onChange={() => handleInputChange(q.question_number, null, value)}
-                  style={{ marginRight: '8px' }}
-                />
-                {option}
-              </label>
-            );
-          })
-        ) : (
-          <p>Options are not defined.</p>
-        )}
-      </div>
-    );
-  }
+          return (
+            <div key="matching-21-22" className="matching-checkbox-question" style={{ marginBottom: '20px' }}>
+              <p style={{ fontWeight: 'bold' }}>
+                Questions 21 and 22 Choose <b>TWO</b> letters, A-E.<br />
+                Which TWO groups of people is the display primarily intended for?
+              </p>
+              {options.map((option, idxOption) => (
+                <label
+                  key={idxOption}
+                  style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    cursor: submitted ? 'default' : 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    name="matching-21-22"
+                    value={option}
+                    checked={multiMatchingAnswers21_22.includes(option)}
+                    disabled={
+                      submitted ||
+                      (multiMatchingAnswers21_22.length === 2 &&
+                        !multiMatchingAnswers21_22.includes(option))
+                    }
+                    onChange={() => handleMultiMatchingChange('21_22', option)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  {option}
+                </label>
+              ))}
+              {submitted && (
+                <div style={{ color: 'green' }}>
+                  Your answers: {multiMatchingAnswers21_22.join(', ')}
+                </div>
+              )}
+            </div>
+          );
+        }
 
-  // Boshqa matching savollar uchun oddiy radio buttonlar
-  if (q.question_type === 'matching') {
-    return (
-      <div key={q.id} className="matching-radio-question" style={{ marginBottom: '20px' }}>
-        <p style={{ fontWeight: 'bold' }}>
-          {q.instruction ? q.instruction : `Question ${q.question_number}`}
-        </p>
+        // 23-24 multi-matching group
+        if (
+          q.question_type === 'matching' &&
+          (q.question_number === 23 || q.question_number === 24)
+        ) {
+          if (renderedMultiMatching23_24) return null;
+          renderedMultiMatching23_24 = true;
 
-        {q.options && q.options.length > 0 ? (
-          q.options.map((option, idxOption) => {
-            const value = option;
-            const checked = userAnswers[q.question_number] === value;
-            return (
-              <label
-                key={idxOption}
-                style={{ display: 'block', marginBottom: '8px', cursor: submitted ? 'default' : 'pointer' }}
-              >
-                <input
-                  type="radio"
-                  name={`matching-${q.question_number}`}
-                  value={value}
-                  checked={checked}
-                  disabled={submitted}
-                  onChange={() => handleInputChange(q.question_number, null, value)}
-                  style={{ marginRight: '8px' }}
-                />
-                {option}
-              </label>
-            );
-          })
-        ) : (
-          <p>Options are not defined.</p>
-        )}
-      </div>
-    );
-  }
+          // 23-savol options ni ishlatamiz
+          const options =
+            data.questions.find(
+              (quest) =>
+                quest.question_type === 'matching' && quest.question_number === 23
+            )?.options || [];
 
+          return (
+            <div key="matching-23-24" className="matching-checkbox-question" style={{ marginBottom: '20px' }}>
+              <p style={{ fontWeight: 'bold' }}>
+                Questions 23 and 24 Choose <b>TWO</b> letters, A-E.<br />
+                Which TWO things can visitors do at the display?
+              </p>
+              {options.map((option, idxOption) => (
+                <label
+                  key={idxOption}
+                  style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    cursor: submitted ? 'default' : 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    name="matching-23-24"
+                    value={option}
+                    checked={multiMatchingAnswers23_24.includes(option)}
+                    disabled={
+                      submitted ||
+                      (multiMatchingAnswers23_24.length === 2 &&
+                        !multiMatchingAnswers23_24.includes(option))
+                    }
+                    onChange={() => handleMultiMatchingChange('23_24', option)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  {option}
+                </label>
+              ))}
+              {submitted && (
+                <div style={{ color: 'green' }}>
+                  Your answers: {multiMatchingAnswers23_24.join(', ')}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // Boshqa matching savollar uchun oddiy radio buttonlar
+        if (q.question_type === 'matching') {
+          return (
+            <div key={q.id} className="matching-radio-question" style={{ marginBottom: '20px' }}>
+              <p style={{ fontWeight: 'bold' }}>
+                {q.instruction ? q.instruction : `Question ${q.question_number}`}
+              </p>
+              {q.options && q.options.length > 0 ? (
+                q.options.map((option, idxOption) => {
+                  const value = option;
+                  const checked = userAnswers[q.question_number] === value;
+                  return (
+                    <label
+                      key={idxOption}
+                      style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        cursor: submitted ? 'default' : 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name={`matching-${q.question_number}`}
+                        value={value}
+                        checked={checked}
+                        disabled={submitted}
+                        onChange={() =>
+                          handleInputChange(q.question_number, null, value)
+                        }
+                        style={{ marginRight: '8px' }}
+                      />
+                      {option}
+                    </label>
+                  );
+                })
+              ) : (
+                <p>Options are not defined.</p>
+              )}
+            </div>
+          );
+        }
+
+        // Qolgan savollar uchun
         return (
           <QuestionRenderer
             key={q.id}

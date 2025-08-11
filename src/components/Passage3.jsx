@@ -41,15 +41,25 @@ const Passage3 = ({ onSubmit, fontSize }) => {
     if (onSubmit) onSubmit(count);
   };
 
-  const handleAnswerChange = (questionId, value) => {
-    setUserAnswers((prev) => ({
-      ...prev,
-      [questionId]: value,
-    }));
+const handleAnswerChange = (qNum, blankNum, value) => {
+    if (blankNum === null || blankNum === undefined) {
+      setUserAnswers((prev) => ({
+        ...prev,
+        [qNum]: value,
+      }));
+    } else {
+      setUserAnswers((prev) => ({
+        ...prev,
+        [qNum]: {
+          ...(prev[qNum] || {}),
+          [blankNum]: value,
+        },
+      }));
+    }
   };
 
   if (loading || !passage) {
-    return <div className="reading-test-container">Yuklanmoqda...</div>;
+    return <div className="reading-test-container"></div>;
   }
 
   return (
@@ -98,7 +108,8 @@ const Passage3 = ({ onSubmit, fontSize }) => {
                   question={q}
                   userAnswers={userAnswers}
                   submitted={submitted}
-                  onChange={(num, val) => handleAnswerChange(q.id, val)}
+                  onChange={handleAnswerChange}
+                  allQuestions={passage.questions}
                 />
               ))}
             </div>

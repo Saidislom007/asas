@@ -1,24 +1,22 @@
-import React from 'react';
-
 const MapLabelling = ({
   imageSrc,
-  userAnswers,
+  userAnswers = {},
   onChange,
   submitted,
   questionText,
-  options,
+  options = [],
   questionNumber,
   instruction
 }) => {
   const handleSelectChange = (e) => {
     const selectedValue = e.target.value;
-    onChange(questionNumber, selectedValue); // value + questionNumber yuboriladi
+    onChange(questionNumber, selectedValue);
   };
 
   return (
     <div style={{ paddingTop: '20px' }}>
-      <p >{instruction}</p>
-      {/* Xarita rasmi */}
+      {instruction && <p>{instruction}</p>}
+
       {imageSrc && (
         <img
           src={imageSrc}
@@ -33,30 +31,22 @@ const MapLabelling = ({
         />
       )}
 
-      {/* Savol va select */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          marginBottom: '12px',
-          gap: '6px'
-        }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '6px' }}>
         {questionText && (
           <label
             htmlFor={`q${questionNumber}`}
-            style={{
-              fontWeight: '600',
-              flexShrink: 0
-            }}
+            style={{ fontWeight: '600', flexShrink: 0 }}
           >
             {questionNumber}: {questionText}
           </label>
         )}
 
-        {options?.length > 0 && (
+        {options.length > 0 && (
           <select
             id={`q${questionNumber}`}
+            value={userAnswers?.[String(questionNumber)] || ""}
+            disabled={submitted}
+            onChange={handleSelectChange}
             style={{
               border: '1px solid #ccc',
               minWidth: '70px',
@@ -64,9 +54,6 @@ const MapLabelling = ({
               borderRadius: '4px',
               fontSize: '14px'
             }}
-            value={userAnswers?.[questionNumber] || ''}
-            disabled={submitted}
-            onChange={handleSelectChange}
           >
             <option value="">Select</option>
             {options.map((opt, idx) => (
@@ -80,5 +67,6 @@ const MapLabelling = ({
     </div>
   );
 };
+
 
 export default MapLabelling;

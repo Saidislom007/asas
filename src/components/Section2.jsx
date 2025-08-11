@@ -3,7 +3,7 @@ import axios from 'axios';
 import './Section2.css';
 import QuestionRenderer from './QuestionRenderer';
 import CustomAudioPlayer from './CustomAudioPlayer';
-// Global audio tracker
+
 let globalAudioRefs = [];
 
 const Section2 = ({ onSubmit, sectionIndex = 0 }) => {
@@ -15,7 +15,6 @@ const Section2 = ({ onSubmit, sectionIndex = 0 }) => {
 
   const audioRef = useRef(null);
 
-  // Register audioRef
   useEffect(() => {
     globalAudioRefs[sectionIndex] = audioRef;
     return () => {
@@ -23,23 +22,33 @@ const Section2 = ({ onSubmit, sectionIndex = 0 }) => {
     };
   }, [sectionIndex]);
 
-  // Fetch section data
   useEffect(() => {
     axios
       .get(`${import.meta.env.VITE_BACKEND_URL}/api/listening-tests/${testId}/section/2/`)
       .then((res) => setData(res.data))
-      .catch((err) => console.error('Error fetching section 1:', err));
+      .catch((err) => console.error('Error fetching section 2:', err));
   }, []);
 
-  const handleInputChange = (number, value) => {
-    setUserAnswers((prev) => ({
-      ...prev,
-      [number]: value,
-    }));
+  // Universal handleInputChange
+  const handleInputChange = (questionNumber, blankNumber, value) => {
+    if (blankNumber === null || blankNumber === undefined) {
+      setUserAnswers((prev) => ({
+        ...prev,
+        [questionNumber]: value,
+      }));
+    } else {
+      setUserAnswers((prev) => ({
+        ...prev,
+        [questionNumber]: {
+          ...(prev[questionNumber] || {}),
+          [blankNumber]: value,
+        },
+      }));
+    }
   };
 
   const checkCorrect = (number, correctAnswer) => {
-    const userValue = (userAnswers[number] || '').trim().toLowerCase();
+    const userValue = (userAnswers[number] || '').trim?.().toLowerCase?.() || '';
     const correctVariants = correctAnswer
       .replace(/"/g, '')
       .split(',')
@@ -54,14 +63,26 @@ const Section2 = ({ onSubmit, sectionIndex = 0 }) => {
     data.questions.forEach((q) => {
       if (q.question_type === 'table_completion' && q.table?.answers) {
         q.table.answers.forEach((ans) => {
-          if (checkCorrect(ans.number, ans.correct_answer,ans.instruction)) count++;
+          if (checkCorrect(ans.number, ans.correct_answer)) count++;
         });
       } else if (q.question_type === 'form_completion' && q.form?.answers) {
         q.form.answers.forEach((ans) => {
           if (checkCorrect(ans.number, ans.correct_answer)) count++;
         });
       } else if (q.question_type === 'sentence_completion') {
-        if (checkCorrect(q.question_number, q.correct_answer)) count++;
+        // Nested blanklar uchun
+        if (Array.isArray(q.correct_answer)) {
+          q.correct_answer.forEach((ans) => {
+            if (
+              userAnswers[q.question_number]?.[ans.number] &&
+              checkCorrect(q.question_number, ans.correct_answer)
+            ) {
+              count++;
+            }
+          });
+        } else {
+          if (checkCorrect(q.question_number, q.correct_answer)) count++;
+        }
       } else if (q.question_type === 'multiple_choice') {
         if (checkCorrect(q.question_number, q.correct_answer)) count++;
       } else if (q.question_type === 'map_labelling' && q.map?.answers) {
@@ -84,13 +105,13 @@ const Section2 = ({ onSubmit, sectionIndex = 0 }) => {
     });
   };
 
-  if (!data) return <div>Loading...</div>;
+  if (!data) return <div></div>;
 
   return (
     <div className="section-container">
       <h2 className="section-title">Section 2</h2>
 
-        {data.audio_file && (
+      {data.audio_file && (
         <CustomAudioPlayer src={data.audio_file} />
       )}
 
