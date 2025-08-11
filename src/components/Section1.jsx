@@ -95,15 +95,7 @@ const Section1 = ({ onSubmit, sectionIndex = 0 }) => {
         />
       ))}
 
-      <button onClick={handleSubmit} disabled={submitted} className="submit-btn">
-        Submit
-      </button>
 
-      {submitted && (
-        <p className="correct-count">
-          To'g'ri javoblar soni: {correctCount} / {data.questions.length}
-        </p>
-      )}
     </div>
   );
 };

@@ -37,6 +37,7 @@ const QuestionRenderer = ({
   if (question.question_type === 'sentence_completion') {
     return (
       <Component
+        question={question}
         number={question.question_number}
         questionText={question.question_text}
         instruction={question.instruction || ''}
@@ -53,6 +54,7 @@ const QuestionRenderer = ({
   if (question.question_type === 'table_completion') {
     return (
       <Component
+        question={question}
         table={question.table}
         instruction={question.instruction || ''}
         correctAnswers={question.table?.answers?.map((a) => a.correct_answer) || []}
@@ -98,6 +100,7 @@ const QuestionRenderer = ({
   if (question.question_type === 'map_labelling') {
     return (
       <Component
+        question={question}
         imageSrc={question.imageSrc || question.map_image || ''}
         questionText={question.question_text || ''}
         instruction={question.instruction || ''}

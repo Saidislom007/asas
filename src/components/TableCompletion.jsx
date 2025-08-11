@@ -1,7 +1,12 @@
 import React from 'react';
 
+const TableCompletion = ({ table, userAnswers = {}, onChange, instruction, question }) => {
+  // API dan kelgan to'g'ri javoblarni object shaklida olish
+  const correctAnswers = {};
+  (question?.table?.answers || []).forEach(ans => {
+    correctAnswers[ans.number] = ans.correct_answer.toString().trim().toLowerCase();
+  });
 
-const TableCompletion = ({ table, userAnswers = {}, onChange, submitted, instruction }) => {
   const renderTableCell = (text) => {
     const regex = /\[\[(\d+)]]/g;
     const parts = [];
@@ -11,6 +16,11 @@ const TableCompletion = ({ table, userAnswers = {}, onChange, submitted, instruc
     while ((match = regex.exec(text)) !== null) {
       parts.push(text.slice(lastIndex, match.index));
       const number = match[1];
+
+      const userAnswer = (userAnswers[number] || "").toString().trim().toLowerCase();
+      const correctAnswer = correctAnswers[number] || "";
+      const isCorrect = userAnswer.length > 0 && userAnswer === correctAnswer;
+
       parts.push(
         <input
           key={number}
@@ -18,15 +28,16 @@ const TableCompletion = ({ table, userAnswers = {}, onChange, submitted, instruc
           placeholder={`Q${number}`}
           className="border border-gray-300 p-1 mx-1 rounded w-24"
           value={userAnswers[number] || ''}
-          disabled={submitted}
+          disabled={false} // yozish doimo mumkin
           onChange={(e) => onChange(number, null, e.target.value)}
           autoComplete="off"
           style={{
-            borderColor: submitted && !userAnswers[number] ? 'red' : undefined,
-            backgroundColor: submitted && userAnswers[number] ? '#d4edda' : undefined,
+            borderColor: userAnswer.length > 0 ? (isCorrect ? 'green' : 'red') : undefined,
+            backgroundColor: isCorrect ? '#d4edda' : undefined,
           }}
         />
       );
+
       lastIndex = regex.lastIndex;
     }
     parts.push(text.slice(lastIndex));

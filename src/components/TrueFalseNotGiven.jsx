@@ -1,34 +1,48 @@
-import React from "react";
 
-const TrueFalseNotGiven = ({ question, userAnswers = {}, submitted, onChange }) => {
-  const qNum = question?.question_number;
-  const options = question?.options || [];
+import React, { useState } from "react";
+
+const TrueFalseNotGiven = ({ question, onCorrectCountChange }) => {
+  const qNum = question.question_number;
+  const [userValue, setUserValue] = useState("");
+  const [isCorrect, setIsCorrect] = useState(null); // null = hali tanlanmagan
+
+  const handleSelect = (value) => {
+    setUserValue(value);
+    const correct =
+      value.trim().toLowerCase() ===
+      question.correct_answer.trim().toLowerCase();
+    setIsCorrect(correct);
+    if (onCorrectCountChange) {
+      onCorrectCountChange(correct ? 1 : 0);
+    }
+  };
 
   return (
-    <div className="true-false-not-given">
-      {question?.instruction && (
-        <p style={{color:"black",marginBottom:"20px",fontSize:"20px",fontWeight:"bold"}}>{question.instruction}</p>
+    <div>
+      <p>
+        <strong>Q{qNum}.</strong> {question.question_text}
+      </p>
+
+      {question.options?.map((opt, idx) => (
+        <label key={idx} style={{ display: "block" }}>
+          <input
+            type="radio"
+            name={`q-${qNum}`}
+            value={opt}
+            checked={userValue === opt}
+            onChange={() => handleSelect(opt)}
+          />
+          {opt}
+        </label>
+      ))}
+
+      {isCorrect !== null && (
+        <p style={{ color: isCorrect ? "green" : "red", fontWeight: "bold" }}>
+          {isCorrect
+            ? "To‘g‘ri!"
+            : `Noto‘g‘ri. To‘g‘ri javob: ${question.correct_answer}`}
+        </p>
       )}
-
-      <div className="question-header">
-        <strong>Q{qNum}.</strong> {question?.question_text}
-      </div>
-
-      <div className="options">
-        {options.map((opt) => (
-          <label key={opt} className="option-label">
-            <input
-              type="radio"
-              name={`q-${qNum}`}
-              value={opt}
-              checked={opt}
-              onChange={() => onChange(qNum, opt)}
-              disabled={submitted}
-            />
-            {opt}
-          </label>
-        ))}
-      </div>
     </div>
   );
 };

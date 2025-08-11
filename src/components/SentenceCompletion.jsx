@@ -1,35 +1,49 @@
-import React from "react";
-import "./Sentence.css";
+import { useState, useMemo, useEffect } from "react";
 
-/**
- * SentenceCompletion component
- * Props:
- * - number: savol raqami (kerak bo‘lsa)
- * - questionText: gap matni, blanklar [[1]], [[2]], ...
- * - userAnswers: { [blankNumber]: value } tipida object (masalan: {1: "Paris", 2: "Seine"})
- * - onChange: (blankNumber, null, value) => void
- * - submitted: boolean (inputlar disabled bo‘lishi uchun)
- * - instruction: (ixtiyoriy) matn
- * - correctAnswer / correctAnswers: (ixtiyoriy) to‘g‘ri javob yoki javoblar (agar kerak bo‘lsa)
- */
 const SentenceCompletion = ({
   number,
   questionText,
-  userAnswers = {},
   onChange,
-  submitted,
+  submitted = false,  // endi default false, ya'ni yozish mumkin
   instruction,
-  correctAnswers = {},
+  question,
+  onCorrectCountChange,
 }) => {
-  // Matnni [[1]], [[2]] bo‘yicha bo‘lib olish
-  const parts = questionText.split(/(\[\[\d+\]\])/g);
+  const [userValues, setUserValues] = useState({});
 
-  // Javobni tekshirish uchun yordamchi funksiya
-  const isCorrect = (blankNum) => {
-    const userVal = (userAnswers[blankNum] || "").trim().toLowerCase();
-    const correctVal = (correctAnswers[blankNum] || "").toString().trim().toLowerCase();
-    return userVal && correctVal && userVal === correctVal;
+  const handleChange = (blankNum, value) => {
+    setUserValues((prev) => {
+      const updated = { ...prev, [blankNum]: value };
+      if (onChange) onChange(updated);
+      return updated;
+    });
   };
+
+  const correctMap = useMemo(() => {
+    const map = {};
+    const correctAnswer = (question?.correct_answer || "")
+      .toString()
+      .trim()
+      .toLowerCase();
+
+    const blanks = [...questionText.matchAll(/\[\[(\d+)\]\]/g)];
+    blanks.forEach((match) => {
+      const blankNum = match[1];
+      const userAns = (userValues[blankNum] || "").toString().trim().toLowerCase();
+      map[blankNum] = userAns === correctAnswer;
+    });
+
+    return map;
+  }, [userValues, question?.correct_answer, questionText]);
+
+  useEffect(() => {
+    if (onCorrectCountChange) {
+      const correctCount = Object.values(correctMap).filter(Boolean).length;
+      onCorrectCountChange(correctCount);
+    }
+  }, [correctMap, onCorrectCountChange]);
+
+  const parts = questionText.split(/(\[\[\d+\]\])/g);
 
   return (
     <div className="instruction">
@@ -37,8 +51,8 @@ const SentenceCompletion = ({
         <p
           style={{
             color: "black",
-            marginBottom: "20px",
-            fontSize: "20px",
+            marginBottom: 20,
+            fontSize: 20,
             fontWeight: "bold",
           }}
         >
@@ -50,32 +64,35 @@ const SentenceCompletion = ({
         className="sentence-completion"
         style={{
           border: "1px solid #ccc",
-          padding: "15px",
-          borderRadius: "8px",
+          padding: 15,
+          borderRadius: 8,
           backgroundColor: "#f9f9f9",
-          lineHeight: "1.6",
+          lineHeight: 1.6,
         }}
       >
         <p style={{ margin: 0 }}>
           {parts.map((part, idx) => {
             const match = part.match(/\[\[(\d+)\]\]/);
             if (match) {
-              const blankNum = parseInt(match[1], 10);
+              const blankNum = match[1];
+              const isTrue = correctMap[blankNum] === true;
+              const hasValue = userValues[blankNum]?.length > 0;
+
               return (
                 <input
                   key={blankNum}
                   type="text"
                   placeholder={`Q${blankNum}`}
                   className="border border-gray-300 p-1 mx-1 rounded"
-                  value={userAnswers[blankNum] || ""}
-                  disabled={submitted}
-                  onChange={(e) => onChange(blankNum, null, e.target.value)}
+                  value={userValues[blankNum] || ""}
+                  disabled={false}   // yozish doim mumkin
                   autoComplete="off"
+                  onChange={(e) => handleChange(blankNum, e.target.value)}
                   style={{
-                    borderColor:
-                      submitted && !isCorrect(blankNum) ? "red" : undefined,
-                    backgroundColor:
-                      submitted && isCorrect(blankNum) ? "#d4edda" : undefined,
+                    borderColor: hasValue
+                      ? (isTrue ? "green" : "red")
+                      : undefined,
+                    backgroundColor: isTrue ? "#d4edda" : undefined,
                   }}
                 />
               );
